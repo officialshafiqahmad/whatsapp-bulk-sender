@@ -105,8 +105,10 @@ def capture_qr_image(page: Page) -> str | None:
     return None
 
 
-def wait_for_whatsapp_ready(page: Page, on_status: ProgressCallback | None = None, timeout_ms: int = 180_000) -> None:
-    page.goto("https://web.whatsapp.com/", wait_until="domcontentloaded")
+def wait_for_whatsapp_ready(page: Page, on_status: ProgressCallback | None = None, timeout_ms: int = 300_000) -> None:
+    if on_status:
+        on_status({"type": "status", "message": "Opening WhatsApp Web..."})
+    open_whatsapp_home(page)
     deadline = time.time() + (timeout_ms / 1000)
 
     while time.time() < deadline:
@@ -147,7 +149,45 @@ def launch_browser_context(playwright, session_dir: Path, headless: bool):
         headless=headless,
         args=chromium_launch_args(),
         viewport={"width": 1280, "height": 900},
+        user_agent=(
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        ),
+        locale="en-US",
     )
+
+
+def open_whatsapp_home(page: Page) -> None:
+    last_error: Exception | None = None
+    for attempt in range(1, 4):
+        try:
+            page.goto(
+                "https://web.whatsapp.com/",
+                wait_until="commit",
+                timeout=90_000,
+            )
+            page.wait_for_load_state("domcontentloaded", timeout=30_000)
+            return
+        except Exception as exc:
+            last_error = exc
+            time.sleep(3 * attempt)
+    raise TimeoutError(f"Could not open WhatsApp Web after 3 attempts: {last_error}")
+
+
+def verify_whatsapp_connectivity() -> dict:
+    session_dir = get_session_dir()
+    session_dir.mkdir(parents=True, exist_ok=True)
+    with sync_playwright() as playwright:
+        context = launch_browser_context(playwright, session_dir, headless=True)
+        page = context.pages[0] if context.pages else context.new_page()
+        open_whatsapp_home(page)
+        logged_in = is_whatsapp_logged_in(page)
+        qr_image = None if logged_in else capture_qr_image(page)
+        context.close()
+    result = {"status": "ok", "logged_in": logged_in}
+    if qr_image:
+        result["qr_available"] = True
+    return result
 
 
 def verify_browser_launch() -> dict:
@@ -201,7 +241,8 @@ def click_send(page: Page) -> bool:
 
 def send_to_contact(page: Page, contact: Contact, message: str) -> tuple[bool, str]:
     url = build_send_url(contact.phone, message)
-    page.goto(url, wait_until="domcontentloaded")
+    page.goto(url, wait_until="commit", timeout=90_000)
+    page.wait_for_load_state("domcontentloaded", timeout=30_000)
 
     try:
         page.wait_for_selector(
