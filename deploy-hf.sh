@@ -19,7 +19,7 @@ fi
 
 echo "Creating/updating Hugging Face Space: ${HF_USER}/${SPACE_NAME}"
 
-hf repo create "$SPACE_NAME" --type space --space_sdk docker --exist-ok || true
+hf repo create "$SPACE_NAME" --type space --space-sdk docker --exist-ok 2>/dev/null || true
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
