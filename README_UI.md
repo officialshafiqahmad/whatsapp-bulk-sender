@@ -1,4 +1,6 @@
-# WhatsApp Bulk Sender
+# WhatsApp Bulk Sender — UI Guide
+
+**Repository:** https://github.com/officialshafiqahmad/whatsapp-bulk-sender
 
 A simple UI tool for sending the same WhatsApp message to many employees. Built for non-technical users.
 
@@ -13,7 +15,11 @@ Unlike `web.whatsapp.com/send/?phone=...&text=...` links, this app **actually se
 
 ## Quick start (for non-technical users)
 
-1. Open the project folder: `/Users/apple/Development/bulk-message-sender`
+1. Clone the project:
+   ```bash
+   git clone https://github.com/officialshafiqahmad/whatsapp-bulk-sender.git
+   cd whatsapp-bulk-sender
+   ```
 2. Double-click **`start.py`**  
    Or run in Terminal:
    ```bash
@@ -51,7 +57,8 @@ phone
 ## Manual setup
 
 ```bash
-cd /Users/apple/Development/bulk-message-sender
+git clone https://github.com/officialshafiqahmad/whatsapp-bulk-sender.git
+cd whatsapp-bulk-sender
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt

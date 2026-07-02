@@ -2,9 +2,22 @@
 
 Send the same WhatsApp message to multiple employees using a simple web UI.
 
+**Repository:** https://github.com/officialshafiqahmad/whatsapp-bulk-sender
+
+## Clone and run
+
+```bash
+git clone https://github.com/officialshafiqahmad/whatsapp-bulk-sender.git
+cd whatsapp-bulk-sender
+./start.sh
+```
+
+Then open: **http://127.0.0.1:8765**
+
 ## For non-technical users
 
-1. Go to `/Users/apple/Development/bulk-message-sender`
+1. Clone the repo (or download from GitHub):
+   https://github.com/officialshafiqahmad/whatsapp-bulk-sender
 2. Run `./start.sh` or double-click `start.py`
 3. Open **http://127.0.0.1:8765** in your browser
 4. Type your message, add numbers or import Excel, then click **Send messages**
