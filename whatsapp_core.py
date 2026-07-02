@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import json
+import os
 import re
 import time
 import urllib.parse
@@ -68,16 +70,64 @@ def load_config(config_path: Path | None) -> dict:
     return defaults
 
 
-def wait_for_whatsapp_ready(page: Page, on_status: ProgressCallback | None = None, timeout_ms: int = 120_000) -> None:
+def get_session_dir(base_dir: Path | None = None) -> Path:
+    if os.environ.get("SPACE_ID"):
+        return Path("/data/whatsapp-session")
+    if base_dir:
+        return base_dir
+    return Path(DEFAULT_SESSION_DIR)
+
+
+def is_whatsapp_logged_in(page: Page) -> bool:
+    chat_selector = 'div[contenteditable="true"][data-tab="3"], div[contenteditable="true"][data-tab="10"]'
+    try:
+        page.locator(chat_selector).first.wait_for(state="visible", timeout=1500)
+        return True
+    except PlaywrightTimeout:
+        return False
+
+
+def capture_qr_image(page: Page) -> str | None:
+    selectors = [
+        'canvas[aria-label="Scan this QR code to link a device!"]',
+        'canvas[aria-label*="QR"]',
+        'div[data-ref] canvas',
+    ]
+    for selector in selectors:
+        loc = page.locator(selector)
+        if loc.count() > 0:
+            try:
+                if loc.first.is_visible():
+                    png = loc.first.screenshot(type="png")
+                    return base64.b64encode(png).decode("ascii")
+            except Exception:
+                continue
+    return None
+
+
+def wait_for_whatsapp_ready(page: Page, on_status: ProgressCallback | None = None, timeout_ms: int = 180_000) -> None:
     page.goto("https://web.whatsapp.com/", wait_until="domcontentloaded")
-    if on_status:
-        on_status({"type": "status", "message": "Scan the QR code in the browser if you are not logged in yet."})
-    page.wait_for_selector(
-        'div[contenteditable="true"][data-tab="3"], div[contenteditable="true"][data-tab="10"]',
-        timeout=timeout_ms,
-    )
-    if on_status:
-        on_status({"type": "status", "message": "WhatsApp Web is ready."})
+    deadline = time.time() + (timeout_ms / 1000)
+
+    while time.time() < deadline:
+        if is_whatsapp_logged_in(page):
+            if on_status:
+                on_status({"type": "status", "message": "WhatsApp Web is ready."})
+            return
+
+        qr_image = capture_qr_image(page)
+        if qr_image and on_status:
+            on_status({
+                "type": "qr",
+                "message": "Scan this QR code with WhatsApp on your phone (Linked Devices).",
+                "image": qr_image,
+            })
+        elif on_status:
+            on_status({"type": "status", "message": "Waiting for WhatsApp login..."})
+
+        time.sleep(2)
+
+    raise TimeoutError("WhatsApp login timed out. Scan the QR code and try again.")
 
 
 def build_send_url(phone: str, message: str) -> str:
@@ -155,7 +205,7 @@ def send_bulk_messages(
     if not contacts:
         raise ValueError("No contacts to send to.")
 
-    session_dir = session_dir or Path(DEFAULT_SESSION_DIR)
+    session_dir = session_dir or get_session_dir()
     session_dir.mkdir(parents=True, exist_ok=True)
     results: list[SendResult] = []
     total = len(contacts)

@@ -13,12 +13,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from excel_import import ExcelImportError, parse_excel_phone_list
-from whatsapp_core import Contact, load_config, parse_phone_list, send_bulk_messages
+from whatsapp_core import Contact, get_session_dir, load_config, parse_phone_list, send_bulk_messages
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 CONFIG_PATH = BASE_DIR / "config.json"
-if os.environ.get("RENDER") or os.environ.get("HEADLESS") == "true":
+if os.environ.get("SPACE_ID") or os.environ.get("HEADLESS") == "true":
     CONFIG_PATH = BASE_DIR / "config.production.json"
 
 app = FastAPI(title="WhatsApp Bulk Sender")
@@ -35,7 +35,7 @@ if public_app_url:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.trycloudflare\.com",
+    allow_origin_regex=r"https://.*\.(trycloudflare|hf)\.(com|space)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -121,8 +121,11 @@ def start_send(payload: SendRequest) -> StreamingResponse:
 
     config = load_config(CONFIG_PATH if CONFIG_PATH.exists() else None)
     delay_seconds = payload.delay_seconds or config.get("delay_seconds", 5)
-    headless = config.get("headless", False)
-    session_dir = BASE_DIR / config.get("session_dir", ".whatsapp-session")
+    headless = config.get("headless", bool(os.environ.get("SPACE_ID")))
+    if os.environ.get("SPACE_ID"):
+        session_dir = get_session_dir()
+    else:
+        session_dir = BASE_DIR / config.get("session_dir", ".whatsapp-session")
 
     event_queue: queue.Queue[dict | None] = queue.Queue()
 

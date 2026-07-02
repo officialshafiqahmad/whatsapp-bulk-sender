@@ -1,48 +1,31 @@
+---
+title: WhatsApp Bulk Sender
+emoji: 💬
+colorFrom: green
+colorTo: teal
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+---
+
 # WhatsApp Bulk Sender
 
-Send the same WhatsApp message to multiple employees using a simple web UI.
+Send the same WhatsApp message to multiple employees using a simple web UI — **fully online, no local software needed**.
+
+**Live app:** https://officialshafiqahmad-whatsapp-bulk-sender.hf.space
 
 **Repository:** https://github.com/officialshafiqahmad/whatsapp-bulk-sender
 
-**Public UI (free):** https://officialshafiqahmad.github.io/whatsapp-bulk-sender/
+## Use the online app
 
-## 100% free setup
+1. Open https://officialshafiqahmad-whatsapp-bulk-sender.hf.space
+2. Type your message
+3. Add phone numbers or import Excel
+4. Click **Send messages**
+5. Scan the WhatsApp QR code shown on the page (first time only)
 
-| Part | How | Payment |
-|------|-----|---------|
-| UI | GitHub Pages | Free |
-| Excel import | Runs in browser | Free |
-| Sending | `./start-public.sh` + Cloudflare tunnel | Free |
-
-See **[DEPLOY.md](DEPLOY.md)** for the full free setup guide.
-
-## Quick start for sender
-
-```bash
-git clone https://github.com/officialshafiqahmad/whatsapp-bulk-sender.git
-cd whatsapp-bulk-sender
-./start-public.sh
-```
-
-1. Share the **public UI** link with your team
-2. Paste the **backend URL** (from the script) into step 1 of the UI
-3. Send messages
-
-## Local-only (one computer)
-
-```bash
-./start.sh
-```
-
-Open http://127.0.0.1:8765
-
-## For your team
-
-1. Open https://officialshafiqahmad.github.io/whatsapp-bulk-sender/
-2. Paste the backend URL from the person running `start-public.sh`
-3. Type message, add numbers or import Excel, click **Send messages**
-
-See **[README_UI.md](README_UI.md)** for UI instructions and Excel rules.
+No installation. No tunnel. No PC running in the background.
 
 ## Excel import rules
 
@@ -53,15 +36,25 @@ See **[README_UI.md](README_UI.md)** for UI instructions and Excel rules.
 
 Sample file: `sample_numbers.example.xlsx`
 
-## Technical setup
+## Deploy updates (maintainer)
+
+Hosted free on **Hugging Face Spaces** (Docker):
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-playwright install chromium
-python app.py
+pip install -U huggingface_hub
+hf auth login
+./deploy-hf.sh
 ```
+
+See **[DEPLOY.md](DEPLOY.md)** for details.
+
+## Local development (optional)
+
+```bash
+./start.sh
+```
+
+Open http://127.0.0.1:8765
 
 ## CLI (optional)
 

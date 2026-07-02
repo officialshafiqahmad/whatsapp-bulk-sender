@@ -13,8 +13,17 @@ function isLocalApp() {
   return window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost";
 }
 
+function isUnifiedApp() {
+  const host = window.location.hostname;
+  return (
+    isLocalApp() ||
+    host.endsWith(".hf.space") ||
+    host.includes("huggingface.co")
+  );
+}
+
 function resolveApiBase() {
-  if (isLocalApp()) return "";
+  if (isUnifiedApp()) return "";
   return getApiBase();
 }
 
@@ -35,9 +44,20 @@ const logList = document.getElementById("log-list");
 const backendUrlInput = document.getElementById("backend-url");
 const saveBackendBtn = document.getElementById("save-backend");
 const backendStatus = document.getElementById("backend-status");
+const qrPanel = document.getElementById("qr-panel");
+const qrImage = document.getElementById("qr-image");
+const qrMessage = document.getElementById("qr-message");
+
 const backendCard = document.getElementById("backend-card");
 
-let sending = false;
+function updateStepLabels() {
+  const labels = document.querySelectorAll(".step-label");
+  const offset = isUnifiedApp() ? 0 : 1;
+  const numbers = ["1.", "2.", "3."];
+  labels.forEach((label, index) => {
+    label.textContent = numbers[index + offset] || `${index + 1 + offset}.`;
+  });
+}
 
 function parsePhones(text) {
   return text
@@ -69,10 +89,20 @@ function resetProgress() {
   progressFill.style.width = "0%";
   progressText.textContent = "Preparing...";
   logList.innerHTML = "";
+  qrPanel.classList.add("hidden");
+  qrImage.removeAttribute("src");
+}
+
+function showQrCode(base64Image, message) {
+  qrPanel.classList.remove("hidden");
+  qrImage.src = `data:image/png;base64,${base64Image}`;
+  qrMessage.textContent = message || "Scan this QR code with WhatsApp on your phone.";
 }
 
 function initBackendSettings() {
-  if (isLocalApp()) {
+  updateStepLabels();
+
+  if (isUnifiedApp()) {
     backendCard.classList.add("hidden");
     return;
   }
@@ -130,9 +160,9 @@ async function importExcel(file) {
 
 function ensureBackendReady() {
   const apiBase = resolveApiBase();
-  if (!isLocalApp() && !apiBase) {
+  if (!isUnifiedApp() && !apiBase) {
     throw new Error(
-      "Connect the sender first. Run ./start-public.sh on your computer and paste the backend URL in step 1."
+      "Connect the sender first. Use the main online app or paste your backend URL in step 1."
     );
   }
   return apiBase;
@@ -217,12 +247,19 @@ async function startSend() {
 }
 
 function handleEvent(event) {
+  if (event.type === "qr") {
+    showQrCode(event.image, event.message);
+    progressText.textContent = event.message;
+    return;
+  }
+
   if (event.type === "status") {
     progressText.textContent = event.message;
     return;
   }
 
   if (event.type === "progress") {
+    qrPanel.classList.add("hidden");
     const percent = Math.round((event.current / event.total) * 100);
     progressFill.style.width = `${percent}%`;
     progressText.textContent = event.message;

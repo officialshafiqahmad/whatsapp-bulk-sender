@@ -1,61 +1,57 @@
-# Free deployment (no payment required)
+# Deployment — fully online (free)
 
-Everything in this project can run for free.
+The app runs as **one public website** on Hugging Face Spaces. No local PC, no tunnel, no payment.
 
-## Public URLs
+## Live URL
 
-| What | URL | Cost |
-|------|-----|------|
-| **Public UI** | https://officialshafiqahmad.github.io/whatsapp-bulk-sender/ | Free |
-| **Sender backend** | Free Cloudflare tunnel from your computer | Free |
+**https://officialshafiqahmad-whatsapp-bulk-sender.hf.space**
 
 ## How it works
 
-1. **GitHub Pages** hosts the UI publicly (message box, phone list, Excel import).
-2. **Excel import runs in the browser** — no backend needed for that.
-3. **Sending** runs on your computer via `./start-public.sh`, which creates a free Cloudflare tunnel URL.
-4. Paste that tunnel URL into step 1 of the public UI.
+| Part | Where it runs | Cost |
+|------|---------------|------|
+| UI | Hugging Face Space | Free |
+| Excel import | In your browser | Free |
+| WhatsApp sending | HF cloud server | Free |
+| QR login | Shown on the web page | Free |
 
-No Render, no credit card, no paid hosting.
+## First-time WhatsApp login
 
-## For the person who sends messages
+1. Open the live URL
+2. Click **Send messages**
+3. A QR code appears on the page
+4. On your phone: WhatsApp → Settings → Linked Devices → Link a Device
+5. Scan the QR code
+6. Sending starts automatically
+
+The login is saved on the server until the space restarts (you may need to scan again after long idle periods).
+
+## Deploy or update the online app
 
 ```bash
-git clone https://github.com/officialshafiqahmad/whatsapp-bulk-sender.git
-cd whatsapp-bulk-sender
-chmod +x start-public.sh
-./start-public.sh
+pip install huggingface_hub
+huggingface-cli login
+./deploy-hf.sh
 ```
 
-The script prints:
-- **Public UI** link to share with your team
-- **Backend URL** like `https://something.trycloudflare.com` — paste this into the UI
+First build takes about 5–10 minutes.
 
-Keep the terminal window open while messages are sending.
+## GitHub Pages (optional mirror)
 
-## For your team (non-technical)
+https://officialshafiqahmad.github.io/whatsapp-bulk-sender/
 
-1. Open: https://officialshafiqahmad.github.io/whatsapp-bulk-sender/
-2. Ask the sender for the backend URL and paste it in step 1
-3. Type message, add numbers or import Excel
-4. Click **Send messages**
+This is a static copy only. Use the **HF Space URL** above for the full online app.
 
-## Local-only use (simplest)
+## Local development (optional)
 
-If only one person uses it on the same computer:
+Only needed if you are changing the code:
 
 ```bash
 ./start.sh
 ```
 
-Open http://127.0.0.1:8765 — everything works without any tunnel.
-
-## GitHub Pages auto-deploy
-
-Every push to `main` updates the public UI automatically.
-
 ## Notes
 
-- The Cloudflare tunnel URL changes each time you restart `start-public.sh` (unless you set up a free named tunnel with a Cloudflare account).
-- WhatsApp Web login happens on the computer running `start-public.sh`.
-- Paid options like Render are optional and not required.
+- Hugging Face free tier may sleep when idle — first visit after sleep can take ~30 seconds to wake up.
+- WhatsApp may limit very large bulk sends. Keep the delay at 5+ seconds.
+- For official high-volume business messaging, use WhatsApp Business API instead.
