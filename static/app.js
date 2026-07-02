@@ -50,6 +50,8 @@ const qrMessage = document.getElementById("qr-message");
 
 const backendCard = document.getElementById("backend-card");
 
+let sending = false;
+
 function updateStepLabels() {
   const labels = document.querySelectorAll(".step-label");
   const offset = isUnifiedApp() ? 0 : 1;
