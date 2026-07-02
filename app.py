@@ -148,6 +148,14 @@ def validate_phones(payload: SendRequest) -> dict:
     }
 
 
+@app.get("/api/send-status")
+def send_status() -> dict:
+    return {
+        "active": _send_active,
+        "thread_alive": _send_thread.is_alive() if _send_thread else False,
+    }
+
+
 @app.post("/api/send")
 def start_send(payload: SendRequest) -> StreamingResponse:
     message = payload.message.strip()
