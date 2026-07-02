@@ -51,19 +51,29 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-_send_lock = threading.Lock()
+_send_state_lock = threading.Lock()
+_send_active = False
 _send_thread: threading.Thread | None = None
 
 
-def _clear_stale_send_lock() -> None:
-    global _send_thread
-    if _send_thread is not None and not _send_thread.is_alive():
-        _send_thread = None
-        if _send_lock.locked():
-            try:
-                _send_lock.release()
-            except RuntimeError:
-                pass
+def _try_begin_send() -> None:
+    global _send_active, _send_thread
+    with _send_state_lock:
+        if _send_thread is not None and not _send_thread.is_alive():
+            _send_active = False
+            _send_thread = None
+        if _send_active:
+            raise HTTPException(
+                status_code=409,
+                detail="A send job is already running. Please wait for it to finish.",
+            )
+        _send_active = True
+
+
+def _end_send() -> None:
+    global _send_active
+    with _send_state_lock:
+        _send_active = False
 
 
 class SendRequest(BaseModel):
@@ -152,9 +162,7 @@ def start_send(payload: SendRequest) -> StreamingResponse:
     if not contacts:
         raise HTTPException(status_code=400, detail="Add at least one phone number.")
 
-    _clear_stale_send_lock()
-    if not _send_lock.acquire(blocking=False):
-        raise HTTPException(status_code=409, detail="A send job is already running. Please wait for it to finish.")
+    _try_begin_send()
 
     config = load_config(CONFIG_PATH if CONFIG_PATH.exists() else None)
     delay_seconds = payload.delay_seconds or config.get("delay_seconds", 5)
@@ -183,7 +191,7 @@ def start_send(payload: SendRequest) -> StreamingResponse:
             event_queue.put({"type": "error", "message": str(exc)})
         finally:
             event_queue.put(None)
-            _send_lock.release()
+            _end_send()
 
     thread = threading.Thread(target=run_job, daemon=True)
     global _send_thread
