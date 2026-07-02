@@ -12,14 +12,13 @@ GitHub Pages hosts the frontend and connects to the Render backend API.
 
 ## Deploy backend to Render (one-time)
 
-1. Open: https://dashboard.render.com/select-repo?type=blueprint
-2. Connect GitHub and select `whatsapp-bulk-sender`
-3. Render reads `render.yaml` and creates the web service
-4. Wait for the first deploy to finish
+Render requires a payment method on file (free tier still applies — you won't be charged unless you upgrade).
 
-Or click:
+1. Open: https://render.com/deploy?repo=https://github.com/officialshafiqahmad/whatsapp-bulk-sender
+2. Connect GitHub, add billing info, and deploy
+3. Your live app URL will be: **https://whatsapp-bulk-sender.onrender.com**
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/officialshafiqahmad/whatsapp-bulk-sender)
+Or use the dashboard: https://dashboard.render.com/select-repo?type=blueprint
 
 ## Deploy frontend to GitHub Pages (automatic)
 
