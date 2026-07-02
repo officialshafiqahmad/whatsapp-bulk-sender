@@ -25,17 +25,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build static site
-        env:
-          RENDER_APP_URL: ${{ vars.RENDER_APP_URL }}
         run: |
           mkdir -p _site/static
           cp static/index.html _site/index.html
           cp static/styles.css _site/static/styles.css
           cp static/app.js _site/static/app.js
-          API_BASE="${RENDER_APP_URL:-https://whatsapp-bulk-sender.onrender.com}"
+          cp static/excel-import.js _site/static/excel-import.js
           cat > _site/static/config.js <<EOF
           window.APP_CONFIG = {
-            apiBase: "${API_BASE}"
+            apiBase: ""
           };
           EOF
 

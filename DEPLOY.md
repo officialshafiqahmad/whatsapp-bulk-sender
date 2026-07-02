@@ -1,55 +1,61 @@
-# Deployment
+# Free deployment (no payment required)
 
-This app has two public URLs:
+Everything in this project can run for free.
 
-| URL | What it serves |
-|-----|----------------|
-| **GitHub Pages (UI)** | https://officialshafiqahmad.github.io/whatsapp-bulk-sender/ |
-| **Render (full app)** | https://whatsapp-bulk-sender.onrender.com |
+## Public URLs
 
-Use the **Render URL** for the complete experience (UI + sending).  
-GitHub Pages hosts the frontend and connects to the Render backend API.
+| What | URL | Cost |
+|------|-----|------|
+| **Public UI** | https://officialshafiqahmad.github.io/whatsapp-bulk-sender/ | Free |
+| **Sender backend** | Free Cloudflare tunnel from your computer | Free |
 
-## Deploy backend to Render (one-time)
+## How it works
 
-Render requires a payment method on file (free tier still applies — you won't be charged unless you upgrade).
+1. **GitHub Pages** hosts the UI publicly (message box, phone list, Excel import).
+2. **Excel import runs in the browser** — no backend needed for that.
+3. **Sending** runs on your computer via `./start-public.sh`, which creates a free Cloudflare tunnel URL.
+4. Paste that tunnel URL into step 1 of the public UI.
 
-1. Open: https://render.com/deploy?repo=https://github.com/officialshafiqahmad/whatsapp-bulk-sender
-2. Connect GitHub, add billing info, and deploy
-3. Your live app URL will be: **https://whatsapp-bulk-sender.onrender.com**
+No Render, no credit card, no paid hosting.
 
-Or use the dashboard: https://dashboard.render.com/select-repo?type=blueprint
-
-## Deploy frontend to GitHub Pages (automatic)
-
-Every push to `main` runs `.github/workflows/deploy-pages.yml` and publishes the UI.
-
-To enable Pages the first time:
+## For the person who sends messages
 
 ```bash
-gh api repos/officialshafiqahmad/whatsapp-bulk-sender/pages -X POST \
-  -f build_type=workflow \
-  -f source[branch]=main \
-  -f source[path]=/
+git clone https://github.com/officialshafiqahmad/whatsapp-bulk-sender.git
+cd whatsapp-bulk-sender
+chmod +x start-public.sh
+./start-public.sh
 ```
 
-## Optional: set Render URL in GitHub
+The script prints:
+- **Public UI** link to share with your team
+- **Backend URL** like `https://something.trycloudflare.com` — paste this into the UI
 
-If your Render service uses a custom domain, set a repo variable:
+Keep the terminal window open while messages are sending.
+
+## For your team (non-technical)
+
+1. Open: https://officialshafiqahmad.github.io/whatsapp-bulk-sender/
+2. Ask the sender for the backend URL and paste it in step 1
+3. Type message, add numbers or import Excel
+4. Click **Send messages**
+
+## Local-only use (simplest)
+
+If only one person uses it on the same computer:
 
 ```bash
-gh variable set RENDER_APP_URL --body "https://your-custom-domain.com"
+./start.sh
 ```
 
-## Local vs cloud WhatsApp login
+Open http://127.0.0.1:8765 — everything works without any tunnel.
 
-- **Local (`./start.sh`)**: Browser opens visibly; scan QR code on first use.
-- **Cloud (Render)**: Runs headless. WhatsApp Web login on a remote server is limited — for production bulk sending, prefer running locally or use WhatsApp Business API.
+## GitHub Pages auto-deploy
 
-## Environment variables (Render)
+Every push to `main` updates the public UI automatically.
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `PORT` | `10000` | Server port |
-| `HEADLESS` | `true` | Run browser without visible window |
-| `PUBLIC_APP_URL` | — | Adds your public URL to CORS allowlist |
+## Notes
+
+- The Cloudflare tunnel URL changes each time you restart `start-public.sh` (unless you set up a free named tunnel with a Cloudflare account).
+- WhatsApp Web login happens on the computer running `start-public.sh`.
+- Paid options like Render are optional and not required.

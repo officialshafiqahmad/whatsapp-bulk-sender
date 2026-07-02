@@ -1,4 +1,22 @@
-const API_BASE = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || "";
+const STORAGE_KEY = "whatsapp_sender_api_base";
+
+function getApiBase() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) return saved.replace(/\/$/, "");
+  if (window.APP_CONFIG && window.APP_CONFIG.apiBase) {
+    return window.APP_CONFIG.apiBase.replace(/\/$/, "");
+  }
+  return "";
+}
+
+function isLocalApp() {
+  return window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost";
+}
+
+function resolveApiBase() {
+  if (isLocalApp()) return "";
+  return getApiBase();
+}
 
 const messageInput = document.getElementById("message");
 const phonesInput = document.getElementById("phones");
@@ -14,6 +32,10 @@ const progressPanel = document.getElementById("progress-panel");
 const progressFill = document.getElementById("progress-fill");
 const progressText = document.getElementById("progress-text");
 const logList = document.getElementById("log-list");
+const backendUrlInput = document.getElementById("backend-url");
+const saveBackendBtn = document.getElementById("save-backend");
+const backendStatus = document.getElementById("backend-status");
+const backendCard = document.getElementById("backend-card");
 
 let sending = false;
 
@@ -49,37 +71,71 @@ function resetProgress() {
   logList.innerHTML = "";
 }
 
+function initBackendSettings() {
+  if (isLocalApp()) {
+    backendCard.classList.add("hidden");
+    return;
+  }
+
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    backendUrlInput.value = saved;
+    showStatus(backendStatus, "success", "Sender connected.", [saved]);
+  } else {
+    showStatus(
+      backendStatus,
+      "warning",
+      "Paste the backend URL from start-public.sh to enable sending.",
+      ["Excel import works without a backend. Sending needs the free tunnel URL."]
+    );
+  }
+}
+
+function saveBackendUrl() {
+  const value = backendUrlInput.value.trim().replace(/\/$/, "");
+  if (!value) {
+    localStorage.removeItem(STORAGE_KEY);
+    showStatus(backendStatus, "warning", "Backend URL cleared.");
+    return;
+  }
+
+  if (!/^https?:\/\/.+/i.test(value)) {
+    showStatus(backendStatus, "error", "Enter a valid URL starting with http:// or https://");
+    return;
+  }
+
+  localStorage.setItem(STORAGE_KEY, value);
+  showStatus(backendStatus, "success", "Sender connected.", [value]);
+}
+
 async function importExcel(file) {
   importStatus.classList.remove("hidden");
   showStatus(importStatus, "warning", "Checking Excel file...");
 
-  const formData = new FormData();
-  formData.append("file", file);
-
   try {
-    const response = await fetch(`${API_BASE}/api/import-excel`, {
-      method: "POST",
-      body: formData,
-    });
-    const data = await response.json();
-
-    if (!response.ok) {
-      const details = data.detail?.details || [];
-      showStatus(
-        importStatus,
-        "error",
-        data.detail?.message || data.detail || "Import failed.",
-        details
-      );
-      return;
-    }
-
-    phonesInput.value = data.phones.join("\n");
+    const buffer = await file.arrayBuffer();
+    const phones = window.parseExcelPhoneList(buffer, file.name);
+    phonesInput.value = phones.join("\n");
     updateSummary();
-    showStatus(importStatus, "success", data.message);
+    showStatus(importStatus, "success", `Imported ${phones.length} phone numbers successfully.`);
   } catch (error) {
-    showStatus(importStatus, "error", "Could not import the Excel file.", [String(error)]);
+    showStatus(
+      importStatus,
+      "error",
+      error.message || "Import failed.",
+      error.details || []
+    );
   }
+}
+
+function ensureBackendReady() {
+  const apiBase = resolveApiBase();
+  if (!isLocalApp() && !apiBase) {
+    throw new Error(
+      "Connect the sender first. Run ./start-public.sh on your computer and paste the backend URL in step 1."
+    );
+  }
+  return apiBase;
 }
 
 async function startSend() {
@@ -99,6 +155,14 @@ async function startSend() {
     return;
   }
 
+  let apiBase;
+  try {
+    apiBase = ensureBackendReady();
+  } catch (error) {
+    alert(error.message);
+    return;
+  }
+
   sending = true;
   sendBtn.disabled = true;
   resetProgress();
@@ -106,7 +170,7 @@ async function startSend() {
   progressText.textContent = "Starting send job...";
 
   try {
-    const response = await fetch(`${API_BASE}/api/send`, {
+    const response = await fetch(`${apiBase}/api/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -187,6 +251,7 @@ function handleEvent(event) {
 messageInput.addEventListener("input", updateSummary);
 phonesInput.addEventListener("input", updateSummary);
 sendBtn.addEventListener("click", startSend);
+saveBackendBtn.addEventListener("click", saveBackendUrl);
 
 clearBtn.addEventListener("click", () => {
   messageInput.value = "";
@@ -217,4 +282,5 @@ uploadBox.addEventListener("drop", (event) => {
   if (file) importExcel(file);
 });
 
+initBackendSettings();
 updateSummary();

@@ -4,33 +4,45 @@ Send the same WhatsApp message to multiple employees using a simple web UI.
 
 **Repository:** https://github.com/officialshafiqahmad/whatsapp-bulk-sender
 
-**Live UI:** https://officialshafiqahmad.github.io/whatsapp-bulk-sender/
+**Public UI (free):** https://officialshafiqahmad.github.io/whatsapp-bulk-sender/
 
-**Live app (UI + API):** https://whatsapp-bulk-sender.onrender.com
+## 100% free setup
 
-> After the first deploy, open the Render URL for the full app. GitHub Pages serves the public frontend and talks to the Render backend.
+| Part | How | Payment |
+|------|-----|---------|
+| UI | GitHub Pages | Free |
+| Excel import | Runs in browser | Free |
+| Sending | `./start-public.sh` + Cloudflare tunnel | Free |
 
-See **[DEPLOY.md](DEPLOY.md)** for deployment details.
+See **[DEPLOY.md](DEPLOY.md)** for the full free setup guide.
 
-## Clone and run
+## Quick start for sender
 
 ```bash
 git clone https://github.com/officialshafiqahmad/whatsapp-bulk-sender.git
 cd whatsapp-bulk-sender
+./start-public.sh
+```
+
+1. Share the **public UI** link with your team
+2. Paste the **backend URL** (from the script) into step 1 of the UI
+3. Send messages
+
+## Local-only (one computer)
+
+```bash
 ./start.sh
 ```
 
-Then open: **http://127.0.0.1:8765**
+Open http://127.0.0.1:8765
 
-## For non-technical users
+## For your team
 
-1. Clone the repo (or download from GitHub):
-   https://github.com/officialshafiqahmad/whatsapp-bulk-sender
-2. Run `./start.sh` or double-click `start.py`
-3. Open **http://127.0.0.1:8765** in your browser
-4. Type your message, add numbers or import Excel, then click **Send messages**
+1. Open https://officialshafiqahmad.github.io/whatsapp-bulk-sender/
+2. Paste the backend URL from the person running `start-public.sh`
+3. Type message, add numbers or import Excel, click **Send messages**
 
-See **[README_UI.md](README_UI.md)** for full UI instructions and Excel rules.
+See **[README_UI.md](README_UI.md)** for UI instructions and Excel rules.
 
 ## Excel import rules
 
