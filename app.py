@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 import queue
 import threading
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -16,8 +18,28 @@ from whatsapp_core import Contact, load_config, parse_phone_list, send_bulk_mess
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 CONFIG_PATH = BASE_DIR / "config.json"
+if os.environ.get("RENDER") or os.environ.get("HEADLESS") == "true":
+    CONFIG_PATH = BASE_DIR / "config.production.json"
 
 app = FastAPI(title="WhatsApp Bulk Sender")
+
+allowed_origins = [
+    "http://127.0.0.1:8765",
+    "http://localhost:8765",
+    "https://officialshafiqahmad.github.io",
+]
+public_app_url = os.environ.get("PUBLIC_APP_URL")
+if public_app_url:
+    allowed_origins.append(public_app_url.rstrip("/"))
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 _send_lock = threading.Lock()
@@ -27,6 +49,11 @@ class SendRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     phones: list[str] = Field(min_length=1)
     delay_seconds: int = Field(default=5, ge=2, le=60)
+
+
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok"}
 
 
 @app.get("/")
@@ -133,4 +160,6 @@ def start_send(payload: SendRequest) -> StreamingResponse:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("app:app", host="127.0.0.1", port=8765, reload=False)
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", "8765"))
+    uvicorn.run("app:app", host=host, port=port, reload=False)

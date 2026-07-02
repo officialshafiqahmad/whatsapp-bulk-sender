@@ -1,0 +1,5 @@
+{
+  "delay_seconds": 5,
+  "headless": true,
+  "session_dir": ".whatsapp-session"
+}

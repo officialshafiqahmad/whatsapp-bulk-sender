@@ -1,3 +1,5 @@
+const API_BASE = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || "";
+
 const messageInput = document.getElementById("message");
 const phonesInput = document.getElementById("phones");
 const delayInput = document.getElementById("delay");
@@ -55,7 +57,7 @@ async function importExcel(file) {
   formData.append("file", file);
 
   try {
-    const response = await fetch("/api/import-excel", {
+    const response = await fetch(`${API_BASE}/api/import-excel`, {
       method: "POST",
       body: formData,
     });
@@ -104,7 +106,7 @@ async function startSend() {
   progressText.textContent = "Starting send job...";
 
   try {
-    const response = await fetch("/api/send", {
+    const response = await fetch(`${API_BASE}/api/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

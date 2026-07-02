@@ -4,6 +4,14 @@ Send the same WhatsApp message to multiple employees using a simple web UI.
 
 **Repository:** https://github.com/officialshafiqahmad/whatsapp-bulk-sender
 
+**Live UI:** https://officialshafiqahmad.github.io/whatsapp-bulk-sender/
+
+**Live app (UI + API):** https://whatsapp-bulk-sender.onrender.com
+
+> After the first deploy, open the Render URL for the full app. GitHub Pages serves the public frontend and talks to the Render backend.
+
+See **[DEPLOY.md](DEPLOY.md)** for deployment details.
+
 ## Clone and run
 
 ```bash

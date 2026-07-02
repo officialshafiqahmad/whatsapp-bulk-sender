@@ -59,7 +59,7 @@ def parse_phone_list(text: str) -> list[Contact]:
 def load_config(config_path: Path | None) -> dict:
     defaults = {
         "delay_seconds": DEFAULT_DELAY,
-        "headless": False,
+        "headless": os.environ.get("HEADLESS", "").lower() == "true",
         "session_dir": DEFAULT_SESSION_DIR,
     }
     if config_path and config_path.exists():

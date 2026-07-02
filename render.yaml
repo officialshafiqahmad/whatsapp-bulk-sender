@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: whatsapp-bulk-sender
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: main
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0
+      - key: HEADLESS
+        value: true
+      - key: PYTHONUNBUFFERED
+        value: "1"
