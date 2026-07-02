@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp Bulk Sender</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Company messaging tool</p>
+        <h1>WhatsApp Bulk Sender</h1>
+        <p class="subtitle">Type your message, add phone numbers, or import a single-column Excel list. The app sends each message automatically.</p>
+      </div>
+      <div class="hero-card">
+        <strong>Before you start</strong>
+        <p>On first use, a browser window opens for WhatsApp Web. Scan the QR code once with your phone.</p>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>1. Message</h2>
+        <label for="message">Message to send</label>
+        <textarea id="message" rows="5" placeholder="Example: Your invoice has been generated."></textarea>
+        <p class="hint">This same message will be sent to every number in your list.</p>
+      </section>
+
+      <section class="card">
+        <h2>2. Phone numbers</h2>
+        <label for="phones">Enter numbers manually</label>
+        <textarea id="phones" rows="10" placeholder="One number per line&#10;923109916330&#10;923001234567"></textarea>
+        <p class="hint">Use international format without +. Example: 923109916330</p>
+
+        <div class="divider"><span>or import from Excel</span></div>
+
+        <label for="excel-file">Excel file (.xlsx)</label>
+        <div class="upload-box" id="upload-box">
+          <input type="file" id="excel-file" accept=".xlsx,.xlsm" />
+          <p><strong>Choose file</strong> or drag and drop here</p>
+          <p class="hint">Only a single column of phone numbers is accepted.</p>
+        </div>
+        <div id="import-status" class="status-box hidden"></div>
+      </section>
+
+      <section class="card">
+        <h2>3. Send</h2>
+        <div class="settings-row">
+          <label for="delay">Delay between messages (seconds)</label>
+          <input type="number" id="delay" min="2" max="60" value="5" />
+        </div>
+
+        <div class="summary" id="summary">
+          <span id="summary-count">0 numbers</span>
+          <span id="summary-message">No message yet</span>
+        </div>
+
+        <button id="send-btn" class="primary-btn">Send messages</button>
+        <button id="clear-btn" class="secondary-btn" type="button">Clear all</button>
+
+        <div id="progress-panel" class="progress-panel hidden">
+          <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+          <p id="progress-text">Preparing...</p>
+          <ul id="log-list" class="log-list"></ul>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

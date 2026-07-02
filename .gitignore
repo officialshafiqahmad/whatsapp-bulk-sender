@@ -1,0 +1,7 @@
+venv/
+.whatsapp-session/
+__pycache__/
+*.pyc
+config.json
+employees.csv
+.DS_Store
