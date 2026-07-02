@@ -52,6 +52,18 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 _send_lock = threading.Lock()
+_send_thread: threading.Thread | None = None
+
+
+def _clear_stale_send_lock() -> None:
+    global _send_thread
+    if _send_thread is not None and not _send_thread.is_alive():
+        _send_thread = None
+        if _send_lock.locked():
+            try:
+                _send_lock.release()
+            except RuntimeError:
+                pass
 
 
 class SendRequest(BaseModel):
@@ -140,6 +152,7 @@ def start_send(payload: SendRequest) -> StreamingResponse:
     if not contacts:
         raise HTTPException(status_code=400, detail="Add at least one phone number.")
 
+    _clear_stale_send_lock()
     if not _send_lock.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="A send job is already running. Please wait for it to finish.")
 
@@ -173,6 +186,8 @@ def start_send(payload: SendRequest) -> StreamingResponse:
             _send_lock.release()
 
     thread = threading.Thread(target=run_job, daemon=True)
+    global _send_thread
+    _send_thread = thread
     thread.start()
 
     def event_stream():
