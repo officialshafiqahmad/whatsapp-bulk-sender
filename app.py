@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from excel_import import ExcelImportError, parse_excel_phone_list
-from whatsapp_core import Contact, get_session_dir, load_config, parse_phone_list, send_bulk_messages
+from whatsapp_core import Contact, get_session_dir, load_config, parse_phone_list, send_bulk_messages, verify_browser_launch
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -55,6 +55,14 @@ class SendRequest(BaseModel):
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/api/browser-check")
+def browser_check() -> dict:
+    try:
+        return verify_browser_launch()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @app.get("/")

@@ -130,6 +130,38 @@ def wait_for_whatsapp_ready(page: Page, on_status: ProgressCallback | None = Non
     raise TimeoutError("WhatsApp login timed out. Scan the QR code and try again.")
 
 
+def chromium_launch_args() -> list[str]:
+    args = ["--disable-blink-features=AutomationControlled"]
+    if os.environ.get("SPACE_ID") or os.environ.get("HEADLESS") == "true":
+        args.extend([
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+        ])
+    return args
+
+
+def launch_browser_context(playwright, session_dir: Path, headless: bool):
+    return playwright.chromium.launch_persistent_context(
+        user_data_dir=str(session_dir.resolve()),
+        headless=headless,
+        args=chromium_launch_args(),
+        viewport={"width": 1280, "height": 900},
+    )
+
+
+def verify_browser_launch() -> dict:
+    session_dir = get_session_dir()
+    session_dir.mkdir(parents=True, exist_ok=True)
+    with sync_playwright() as playwright:
+        context = launch_browser_context(playwright, session_dir, headless=True)
+        page = context.pages[0] if context.pages else context.new_page()
+        page.goto("about:blank", wait_until="domcontentloaded", timeout=30_000)
+        title = page.title()
+        context.close()
+    return {"status": "ok", "title": title}
+
+
 def build_send_url(phone: str, message: str) -> str:
     params = urllib.parse.urlencode({"phone": phone, "text": message})
     return f"{WHATSAPP_SEND_URL}?{params}"
@@ -215,12 +247,7 @@ def send_bulk_messages(
             on_progress(event)
 
     with sync_playwright() as p:
-        context = p.chromium.launch_persistent_context(
-            user_data_dir=str(session_dir.resolve()),
-            headless=headless,
-            args=["--disable-blink-features=AutomationControlled"],
-            viewport={"width": 1280, "height": 900},
-        )
+        context = launch_browser_context(p, session_dir, headless=headless)
         page = context.pages[0] if context.pages else context.new_page()
 
         wait_for_whatsapp_ready(page, on_status=emit)
