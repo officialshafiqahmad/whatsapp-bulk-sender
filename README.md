@@ -13,13 +13,13 @@ license: mit
 
 Send the same WhatsApp message to multiple employees using a simple web UI — **fully online, no local software needed**.
 
-**Live app:** https://officialshafiqahmad-whatsapp-bulk-sender.hf.space
+**Live app:** https://officialshafiqahmad-company-message-sender.hf.space
 
 **Repository:** https://github.com/officialshafiqahmad/whatsapp-bulk-sender
 
 ## Use the online app
 
-1. Open https://officialshafiqahmad-whatsapp-bulk-sender.hf.space
+1. Open https://officialshafiqahmad-company-message-sender.hf.space
 2. Type your message
 3. Add phone numbers or import Excel
 4. Click **Send messages**

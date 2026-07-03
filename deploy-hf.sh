@@ -2,7 +2,7 @@
 set -e
 cd "$(dirname "$0")"
 
-SPACE_NAME="${HF_SPACE_NAME:-whatsapp-bulk-sender}"
+SPACE_NAME="${HF_SPACE_NAME:-company-message-sender}"
 HF_USER="${HF_USER:-officialshafiqahmad}"
 SPACE_REPO="https://huggingface.co/spaces/${HF_USER}/${SPACE_NAME}"
 
