@@ -175,6 +175,8 @@ def start_send(payload: SendRequest) -> StreamingResponse:
     config = load_config(CONFIG_PATH if CONFIG_PATH.exists() else None)
     delay_seconds = payload.delay_seconds or config.get("delay_seconds", 5)
     headless = config.get("headless", bool(os.environ.get("SPACE_ID")))
+    browser_mode = "persistent" if os.environ.get("SPACE_ID") else config.get("browser_mode", "cdp")
+    cdp_url = config.get("cdp_url", "http://127.0.0.1:9222")
     if os.environ.get("SPACE_ID"):
         session_dir = get_session_dir()
     else:
@@ -193,6 +195,8 @@ def start_send(payload: SendRequest) -> StreamingResponse:
                 delay_seconds=delay_seconds,
                 headless=headless,
                 session_dir=session_dir,
+                browser_mode=browser_mode,
+                cdp_url=cdp_url,
                 on_progress=on_progress,
             )
         except Exception as exc:

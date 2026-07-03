@@ -1,5 +1,7 @@
 {
   "delay_seconds": 5,
   "headless": false,
-  "session_dir": ".whatsapp-session"
+  "session_dir": ".whatsapp-session",
+  "browser_mode": "cdp",
+  "cdp_url": "http://127.0.0.1:9222"
 }

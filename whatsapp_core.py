@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterator
 
-from playwright.sync_api import Page, TimeoutError as PlaywrightTimeout, sync_playwright
+from playwright.sync_api import Browser, BrowserContext, Page, Playwright, TimeoutError as PlaywrightTimeout, sync_playwright
 
 WHATSAPP_SEND_URL = "https://web.whatsapp.com/send/"
 DEFAULT_DELAY = 5
@@ -30,6 +30,28 @@ class SendResult:
     contact: Contact
     success: bool
     detail: str
+
+
+@dataclass
+class BrowserSession:
+    playwright: Playwright
+    context: BrowserContext
+    page: Page
+    browser: Browser | None = None
+    close_on_exit: bool = True
+
+
+def use_existing_browser() -> bool:
+    if os.environ.get("SPACE_ID"):
+        return False
+    mode = os.environ.get("BROWSER_MODE", "").lower()
+    if mode == "cdp":
+        return True
+    return os.environ.get("USE_EXISTING_BROWSER", "").lower() in {"1", "true", "yes"}
+
+
+def get_cdp_url() -> str:
+    return os.environ.get("CDP_URL", "http://127.0.0.1:9222")
 
 
 def normalize_phone(phone: str) -> str:
@@ -63,6 +85,8 @@ def load_config(config_path: Path | None) -> dict:
         "delay_seconds": DEFAULT_DELAY,
         "headless": os.environ.get("HEADLESS", "").lower() == "true",
         "session_dir": DEFAULT_SESSION_DIR,
+        "browser_mode": "cdp" if use_existing_browser() else "persistent",
+        "cdp_url": get_cdp_url(),
     }
     if config_path and config_path.exists():
         with config_path.open(encoding="utf-8") as f:
@@ -105,10 +129,30 @@ def capture_qr_image(page: Page) -> str | None:
     return None
 
 
-def wait_for_whatsapp_ready(page: Page, on_status: ProgressCallback | None = None, timeout_ms: int = 300_000) -> None:
-    if on_status:
-        on_status({"type": "status", "message": "Opening WhatsApp Web..."})
-    open_whatsapp_home(page)
+def find_whatsapp_page(context: BrowserContext) -> Page | None:
+    for page in context.pages:
+        if "web.whatsapp.com" in page.url:
+            return page
+    return None
+
+
+def wait_for_whatsapp_ready(
+    page: Page,
+    on_status: ProgressCallback | None = None,
+    timeout_ms: int = 300_000,
+    *,
+    show_qr: bool = True,
+) -> None:
+    if is_whatsapp_logged_in(page):
+        if on_status:
+            on_status({"type": "status", "message": "Using your existing WhatsApp Web session."})
+        return
+
+    if "web.whatsapp.com" not in page.url:
+        if on_status:
+            on_status({"type": "status", "message": "Opening WhatsApp Web..."})
+        open_whatsapp_home(page)
+
     deadline = time.time() + (timeout_ms / 1000)
 
     while time.time() < deadline:
@@ -117,19 +161,27 @@ def wait_for_whatsapp_ready(page: Page, on_status: ProgressCallback | None = Non
                 on_status({"type": "status", "message": "WhatsApp Web is ready."})
             return
 
-        qr_image = capture_qr_image(page)
-        if qr_image and on_status:
-            on_status({
-                "type": "qr",
-                "message": "Scan this QR code with WhatsApp on your phone (Linked Devices).",
-                "image": qr_image,
-            })
+        if show_qr:
+            qr_image = capture_qr_image(page)
+            if qr_image and on_status:
+                on_status({
+                    "type": "qr",
+                    "message": "Scan this QR code with WhatsApp on your phone (Linked Devices).",
+                    "image": qr_image,
+                })
+            elif on_status:
+                on_status({"type": "status", "message": "Waiting for WhatsApp login..."})
         elif on_status:
-            on_status({"type": "status", "message": "Waiting for WhatsApp login..."})
+            on_status({
+                "type": "status",
+                "message": "Log in to WhatsApp Web in your Chrome window, then try Send again.",
+            })
 
         time.sleep(2)
 
-    raise TimeoutError("WhatsApp login timed out. Scan the QR code and try again.")
+    if show_qr:
+        raise TimeoutError("WhatsApp login timed out. Scan the QR code and try again.")
+    raise TimeoutError("WhatsApp is not logged in. Open web.whatsapp.com in Chrome and log in first.")
 
 
 def chromium_launch_args() -> list[str]:
@@ -143,7 +195,7 @@ def chromium_launch_args() -> list[str]:
     return args
 
 
-def launch_browser_context(playwright, session_dir: Path, headless: bool):
+def launch_browser_context(playwright: Playwright, session_dir: Path, headless: bool) -> BrowserContext:
     return playwright.chromium.launch_persistent_context(
         user_data_dir=str(session_dir.resolve()),
         headless=headless,
@@ -155,6 +207,45 @@ def launch_browser_context(playwright, session_dir: Path, headless: bool):
         ),
         locale="en-US",
     )
+
+
+def open_browser_session(
+    playwright: Playwright,
+    *,
+    session_dir: Path,
+    headless: bool,
+    browser_mode: str,
+    cdp_url: str,
+) -> BrowserSession:
+    if browser_mode == "cdp" or use_existing_browser():
+        browser = playwright.chromium.connect_over_cdp(cdp_url)
+        context = browser.contexts[0] if browser.contexts else browser.new_context()
+        page = find_whatsapp_page(context)
+        if page is None:
+            page = context.new_page()
+        return BrowserSession(
+            playwright=playwright,
+            context=context,
+            page=page,
+            browser=browser,
+            close_on_exit=False,
+        )
+
+    context = launch_browser_context(playwright, session_dir, headless=headless)
+    page = context.pages[0] if context.pages else context.new_page()
+    return BrowserSession(
+        playwright=playwright,
+        context=context,
+        page=page,
+        close_on_exit=True,
+    )
+
+
+def close_browser_session(session: BrowserSession) -> None:
+    if session.close_on_exit:
+        session.context.close()
+    elif session.browser is not None:
+        session.browser.close()
 
 
 def open_whatsapp_home(page: Page) -> None:
@@ -273,6 +364,8 @@ def send_bulk_messages(
     delay_seconds: int = DEFAULT_DELAY,
     headless: bool = False,
     session_dir: Path | None = None,
+    browser_mode: str = "persistent",
+    cdp_url: str = "http://127.0.0.1:9222",
     on_progress: ProgressCallback | None = None,
 ) -> list[SendResult]:
     if not contacts:
@@ -282,16 +375,22 @@ def send_bulk_messages(
     session_dir.mkdir(parents=True, exist_ok=True)
     results: list[SendResult] = []
     total = len(contacts)
+    show_qr = not (browser_mode == "cdp" or use_existing_browser())
 
     def emit(event: dict) -> None:
         if on_progress:
             on_progress(event)
 
     with sync_playwright() as p:
-        context = launch_browser_context(p, session_dir, headless=headless)
-        page = context.pages[0] if context.pages else context.new_page()
+        session = open_browser_session(
+            p,
+            session_dir=session_dir,
+            headless=headless,
+            browser_mode=browser_mode,
+            cdp_url=cdp_url,
+        )
 
-        wait_for_whatsapp_ready(page, on_status=emit)
+        wait_for_whatsapp_ready(session.page, on_status=emit, show_qr=show_qr)
 
         for index, contact in enumerate(contacts, 1):
             emit({
@@ -302,7 +401,7 @@ def send_bulk_messages(
                 "message": f"Sending to {contact.phone}...",
             })
 
-            ok, detail = send_to_contact(page, contact, message)
+            ok, detail = send_to_contact(session.page, contact, message)
             results.append(SendResult(contact=contact, success=ok, detail=detail))
 
             emit({
@@ -317,7 +416,7 @@ def send_bulk_messages(
             if index < total:
                 time.sleep(delay_seconds)
 
-        context.close()
+        close_browser_session(session)
 
     sent = sum(1 for r in results if r.success)
     emit({

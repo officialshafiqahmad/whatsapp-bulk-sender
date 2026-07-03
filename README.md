@@ -17,7 +17,23 @@ Send the same WhatsApp message to multiple employees using a simple web UI — *
 
 **Repository:** https://github.com/officialshafiqahmad/whatsapp-bulk-sender
 
-## Use the online app
+## Use your existing Chrome WhatsApp (no QR in app)
+
+The online Hugging Face app **cannot** use WhatsApp logged in on your computer — it runs on a remote server.
+
+To use your **existing Chrome WhatsApp login** locally:
+
+```bash
+# Terminal 1 — use your normal Chrome profile (WhatsApp already logged in)
+./start-chrome.sh --use-my-profile
+
+# Terminal 2
+./start.sh
+```
+
+Open http://127.0.0.1:8765 — click Send, **no QR code**.
+
+## Use the online app (cloud)
 
 1. Open https://officialshafiqahmad-company-message-sender.hf.space
 2. Type your message
