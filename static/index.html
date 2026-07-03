@@ -12,11 +12,11 @@
       <div>
         <p class="eyebrow">Company messaging tool</p>
         <h1>WhatsApp Bulk Sender</h1>
-        <p class="subtitle">Type your message, add phone numbers, or import a single-column Excel list. Everything runs online — no software on your computer.</p>
+        <p class="subtitle">Type your message, add phone numbers, or import Excel. Opens WhatsApp Web in your browser using your existing login.</p>
       </div>
       <div class="hero-card">
-        <strong>Use your Chrome WhatsApp login</strong>
-        <p>Online mode needs a one-time QR scan on the server. To use the WhatsApp already open in your Chrome, run the app locally with <code>./start-chrome.sh</code> then <code>./start.sh</code> — no QR in the app.</p>
+        <strong>Uses your browser WhatsApp</strong>
+        <p>Like clicking <code>web.whatsapp.com/send/?phone=...</code> — opens in Chrome with your logged-in WhatsApp. You click <strong>Send</strong> in each chat (WhatsApp does not allow websites to click Send for you).</p>
       </div>
     </header>
 
@@ -58,6 +58,19 @@
 
       <section class="card">
         <h2><span class="step-label">3.</span> Send</h2>
+
+        <fieldset class="mode-picker">
+          <legend>How to send</legend>
+          <label class="mode-option">
+            <input type="radio" name="send-mode" value="browser" checked />
+            <span><strong>My browser</strong> — uses your logged-in WhatsApp (recommended)</span>
+          </label>
+          <label class="mode-option">
+            <input type="radio" name="send-mode" value="auto" />
+            <span><strong>Auto-send</strong> — server clicks Send (needs QR or local setup)</span>
+          </label>
+        </fieldset>
+
         <div class="settings-row">
           <label for="delay">Delay between messages (seconds)</label>
           <input type="number" id="delay" min="2" max="60" value="5" />
@@ -68,7 +81,7 @@
           <span id="summary-message">No message yet</span>
         </div>
 
-        <button id="send-btn" class="primary-btn">Send messages</button>
+        <button id="send-btn" class="primary-btn">Open in WhatsApp Web</button>
         <button id="clear-btn" class="secondary-btn" type="button">Clear all</button>
 
         <div id="progress-panel" class="progress-panel hidden">

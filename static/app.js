@@ -1,4 +1,5 @@
 const STORAGE_KEY = "whatsapp_sender_api_base";
+const MODE_STORAGE_KEY = "whatsapp_sender_send_mode";
 
 function getApiBase() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -27,6 +28,20 @@ function resolveApiBase() {
   return getApiBase();
 }
 
+function getSendMode() {
+  const selected = document.querySelector('input[name="send-mode"]:checked');
+  return selected ? selected.value : "browser";
+}
+
+function buildWhatsAppUrl(phone, message) {
+  const params = new URLSearchParams({ phone, text: message });
+  return `https://web.whatsapp.com/send/?${params.toString()}`;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 const messageInput = document.getElementById("message");
 const phonesInput = document.getElementById("phones");
 const delayInput = document.getElementById("delay");
@@ -47,14 +62,15 @@ const backendStatus = document.getElementById("backend-status");
 const qrPanel = document.getElementById("qr-panel");
 const qrImage = document.getElementById("qr-image");
 const qrMessage = document.getElementById("qr-message");
-
 const backendCard = document.getElementById("backend-card");
+const modeInputs = document.querySelectorAll('input[name="send-mode"]');
 
 let sending = false;
+let stopBrowserQueue = false;
 
 function updateStepLabels() {
   const labels = document.querySelectorAll(".step-label");
-  const offset = isUnifiedApp() ? 0 : 1;
+  const offset = getSendMode() === "browser" ? 0 : (isUnifiedApp() ? 0 : 1);
   const numbers = ["1.", "2.", "3."];
   labels.forEach((label, index) => {
     label.textContent = numbers[index + offset] || `${index + 1 + offset}.`;
@@ -77,6 +93,10 @@ function updateSummary() {
     : "No message yet";
 }
 
+function updateSendButtonLabel() {
+  sendBtn.textContent = getSendMode() === "browser" ? "Open in WhatsApp Web" : "Send automatically";
+}
+
 function showStatus(element, type, title, details = []) {
   element.classList.remove("hidden", "success", "error", "warning");
   element.classList.add(type);
@@ -93,6 +113,7 @@ function resetProgress() {
   logList.innerHTML = "";
   qrPanel.classList.add("hidden");
   qrImage.removeAttribute("src");
+  stopBrowserQueue = false;
 }
 
 function showQrCode(base64Image, message) {
@@ -103,12 +124,21 @@ function showQrCode(base64Image, message) {
 
 function initBackendSettings() {
   updateStepLabels();
+  updateSendButtonLabel();
 
-  if (isUnifiedApp()) {
+  const savedMode = localStorage.getItem(MODE_STORAGE_KEY);
+  if (savedMode) {
+    const input = document.querySelector(`input[name="send-mode"][value="${savedMode}"]`);
+    if (input) input.checked = true;
+  }
+
+  if (isUnifiedApp() || getSendMode() === "browser") {
     backendCard.classList.add("hidden");
+    updateStepLabels();
     return;
   }
 
+  backendCard.classList.remove("hidden");
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     backendUrlInput.value = saved;
@@ -117,8 +147,8 @@ function initBackendSettings() {
     showStatus(
       backendStatus,
       "warning",
-      "Paste the backend URL from start-public.sh to enable sending.",
-      ["Excel import works without a backend. Sending needs the free tunnel URL."]
+      "Auto-send needs a backend URL.",
+      ["Use My browser mode to skip this step."]
     );
   }
 }
@@ -164,29 +194,67 @@ function ensureBackendReady() {
   const apiBase = resolveApiBase();
   if (!isUnifiedApp() && !apiBase) {
     throw new Error(
-      "Connect the sender first. Use the main online app or paste your backend URL in step 1."
+      "Connect the sender first, or switch to My browser mode."
     );
   }
   return apiBase;
 }
 
-async function startSend() {
-  if (sending) return;
+async function startBrowserSend(phones, message, delaySeconds) {
+  resetProgress();
+  progressPanel.classList.remove("hidden");
+  stopBrowserQueue = false;
+  sending = true;
+  sendBtn.disabled = true;
+  sendBtn.textContent = "Stop";
 
-  const message = messageInput.value.trim();
-  const phones = parsePhones(phonesInput.value);
-  const delaySeconds = Number(delayInput.value || 5);
+  const total = phones.length;
+  progressText.textContent = "Opening WhatsApp Web in your browser...";
 
-  if (!message) {
-    alert("Please type a message first.");
-    return;
+  for (let index = 0; index < total; index += 1) {
+    if (stopBrowserQueue) break;
+
+    const phone = phones[index];
+    const url = buildWhatsAppUrl(phone, message);
+    const tab = window.open(url, "whatsapp-bulk-sender");
+
+    if (!tab) {
+      progressText.textContent = "Popup blocked. Allow popups for this site and try again.";
+      const item = document.createElement("li");
+      item.className = "fail";
+      item.textContent = "Browser blocked the WhatsApp tab.";
+      logList.prepend(item);
+      break;
+    }
+
+    const percent = Math.round(((index + 1) / total) * 100);
+    progressFill.style.width = `${percent}%`;
+    progressText.textContent = `${index + 1}/${total}: Opened ${phone}. Click Send in WhatsApp, then wait...`;
+
+    const item = document.createElement("li");
+    item.className = "ok";
+    item.innerHTML = `${phone}: <a href="${url}" target="whatsapp-bulk-sender">Open again</a>`;
+    logList.prepend(item);
+
+    if (index < total - 1 && !stopBrowserQueue) {
+      await sleep(delaySeconds * 1000);
+    }
   }
 
-  if (!phones.length) {
-    alert("Please add at least one phone number.");
-    return;
+  if (!stopBrowserQueue) {
+    progressFill.style.width = "100%";
+    progressText.textContent = `Done. Opened ${total} chats. Click Send in each WhatsApp tab.`;
+  } else {
+    progressText.textContent = "Stopped.";
   }
 
+  sending = false;
+  stopBrowserQueue = false;
+  sendBtn.disabled = false;
+  updateSendButtonLabel();
+}
+
+async function startAutoSend(phones, message, delaySeconds) {
   let apiBase;
   try {
     apiBase = ensureBackendReady();
@@ -199,7 +267,7 @@ async function startSend() {
   sendBtn.disabled = true;
   resetProgress();
   progressPanel.classList.remove("hidden");
-  progressText.textContent = "Starting send job...";
+  progressText.textContent = "Starting auto-send...";
 
   try {
     const response = await fetch(`${apiBase}/api/send`, {
@@ -245,7 +313,38 @@ async function startSend() {
   } finally {
     sending = false;
     sendBtn.disabled = false;
+    updateSendButtonLabel();
   }
+}
+
+async function startSend() {
+  if (sending) {
+    if (getSendMode() === "browser") {
+      stopBrowserQueue = true;
+    }
+    return;
+  }
+
+  const message = messageInput.value.trim();
+  const phones = parsePhones(phonesInput.value);
+  const delaySeconds = Number(delayInput.value || 5);
+
+  if (!message) {
+    alert("Please type a message first.");
+    return;
+  }
+
+  if (!phones.length) {
+    alert("Please add at least one phone number.");
+    return;
+  }
+
+  if (getSendMode() === "browser") {
+    await startBrowserSend(phones, message, delaySeconds);
+    return;
+  }
+
+  await startAutoSend(phones, message, delaySeconds);
 }
 
 function handleEvent(event) {
@@ -286,6 +385,14 @@ function handleEvent(event) {
     progressText.textContent = `Error: ${event.message}`;
   }
 }
+
+modeInputs.forEach((input) => {
+  input.addEventListener("change", () => {
+    localStorage.setItem(MODE_STORAGE_KEY, getSendMode());
+    initBackendSettings();
+    updateSendButtonLabel();
+  });
+});
 
 messageInput.addEventListener("input", updateSummary);
 phonesInput.addEventListener("input", updateSummary);
